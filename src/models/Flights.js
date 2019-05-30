@@ -31,19 +31,18 @@ import {types, flow, getParent, applySnapshot, getSnapshot, onSnapshot} from "mo
 */
 const Rocket = types
 .model({
-  rocket_id: types.number,
+  rocket_id: types.string,
   rocket_name: types.string,
   description: "",
-  country: types.string,
-  company: types.string,
-  launch_date_unix: types.number,
-  cost_per_launch: types.number,
+  country: "",
+  company: "",
+  cost_per_launch: types.optional(types.number, 0),
   images: types.optional(types.array(types.string), []), 
 })
 .views(self => ({}))
 .actions(self => ({
-  setRocketName(name){
-    self.rocket_name = name;
+  setCountry(name){
+    self.country = name;
   }
 }));
 
@@ -57,9 +56,10 @@ const Payload = types
   reused: types.boolean,
   nationality: types.string,
   manufacturer: types.string,
-  type: types.string,
+  payload_type: types.string,
   customers: types.optional(types.array(types.string), []),
 });
+
 const PayloadList = types.model({
   payload: types.optional(types.array(Payload), []),
 });
@@ -70,10 +70,14 @@ const Flight = types
   mission_name: types.string,
   description: "",
   launch_date_unix: types.number,
-  rocket: types.optional(RocketList, {}),
-  //payload: types.optional(types.array(Payload), []),
+  rocket: types.maybeNull(Rocket),
   payload: types.optional(PayloadList, {}),
-});
+})
+.views(self => ({
+  getRocket(){
+    return self.rocket.rocket_id;
+  }
+}))
 
 const FlightList = types
 .model({
@@ -85,7 +89,7 @@ const FlightList = types
   }
 }))
 .actions(self => ({
-  setRocketData(id, rocket){
+  setRocket(id, rocket){
     self.flight[id].rocket = rocket;
   }
 }));
@@ -113,14 +117,27 @@ export const Flights = window.flights = types
         const rockets = yield response.json();
 
         // Loop through flight list
-        console.log('self.flightList.flight', self.flightList.getFlight(11))
-        /*
-        for(let i = 0; i < self.flightList.flight; i++){
-          console.log(self.flightList.getFlight(11))
+        let len = self.flightList.flight.length;
+        let len2 = rockets.length;
+ 
+        // loop through launches
+        for(let i = 0; i < len; i++){
+          let targetRocket = self.flightList.flight[i].rocket;
+          // loop through rockets
+          for(let j = 0; j < len2; j++){
+            let rData = rockets[j];
+            if(targetRocket.rocket_id == rData.rocket_id){
+              targetRocket.description = rData.description;
+              targetRocket.country = rData.country;
+              targetRocket.company = rData.company;
+              targetRocket.cost_per_launch = rData.cost_per_launch;
+              targetRocket.images = rData.flickr_images;
+            }
+          }
         }
-        */
 
-
+        console.log('self.flightList.flight', self.flightList.getFlight(2))
+    
       }catch(e){
           console.log('aborted', e);
       }
@@ -129,6 +146,18 @@ export const Flights = window.flights = types
       try{
         const response = yield window.fetch('https://api.spacexdata.com/v3/launches');
         const launches = yield response.json();
+
+
+        // Loop through flight list
+        let formattedLaunches = launches;
+        let len = self.flightList.flight.length;
+ 
+        // loop through launches
+        for(let i = 0; i < len; i++){
+          formattedLaunches[i].payload = launches[i].
+        }
+
+
         self.flightList.flight.push(...launches);
 
         // Once launches have loaded, load rocket data
